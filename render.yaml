@@ -1,0 +1,9 @@
+services:
+  # Web Service hosting the API Gateway, React Frontend, and Android Build Engine
+  - type: web
+    name: web2apk
+    runtime: docker
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production

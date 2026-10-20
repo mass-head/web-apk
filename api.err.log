@@ -1,0 +1,23 @@
+PostgreSQL connection not established (). Using memory-backed fallback for tests/standalone.
+PostgreSQL connection not established (). Using memory-backed fallback for tests/standalone.
+(node:5684) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[In-Process Worker] Job conv_c0c0d586f22e failed: 
+[In-Process Worker] Job conv_2d2f3851e169 failed: Gradle compilation timed out after 180 seconds.
+PostgreSQL connection not established (). Using memory-backed fallback for tests/standalone.
+PostgreSQL connection not established (). Using memory-backed fallback for tests/standalone.
+PostgreSQL connection not established (). Using memory-backed fallback for tests/standalone.
+PostgreSQL connection not established (). Using memory-backed fallback for tests/standalone.
+(node:29948) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PostgreSQL connection not established (). Using memory-backed fallback for tests/standalone.
+PostgreSQL connection not established (). Using memory-backed fallback for tests/standalone.
+(node:29188) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[In-Process Worker] Job conv_fe228f9c4046 failed: 
+PostgreSQL connection not established (). Using memory-backed fallback for tests/standalone.
+PostgreSQL connection not established (). Using memory-backed fallback for tests/standalone.
+PostgreSQL connection not established (). Using memory-backed fallback for tests/standalone.
+(node:22512) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[In-Process Worker] Job conv_580ec93d6757 failed: 

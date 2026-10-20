@@ -1,0 +1,45 @@
+{
+  "name": "web2apk-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-oriented Web to Android APK generation platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "npm --workspace=@web2apk/api run start",
+    "start:api": "npm --workspace=@web2apk/api run start",
+    "start:worker": "npm --workspace=@web2apk/worker run start",
+    "start:web": "npm --workspace=@web2apk/web run preview",
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "npm --workspace=@web2apk/web run dev",
+    "dev:api": "npm --workspace=@web2apk/api run dev",
+    "dev:worker": "npm --workspace=@web2apk/worker run dev",
+    "build:web": "npm --workspace=@web2apk/web run build",
+    "build:api": "npm --workspace=@web2apk/api run build",
+    "build:worker": "npm --workspace=@web2apk/worker run build",
+    "build:apk": "tsx packages/android-template/scripts/build-apk.ts",
+    "verify:apk": "tsx packages/android-template/scripts/verify-apk.ts",
+    "build": "npm run build:web && npm run build:api && npm run build:worker",
+    "preview": "npm --workspace=@web2apk/web run preview",
+    "test:api": "npm --workspace=@web2apk/api run test",
+    "test:template": "vitest run packages/android-template/test",
+    "test:worker": "npm --workspace=@web2apk/worker run test",
+    "test:web": "npm --workspace=@web2apk/web run test",
+    "test": "npm run test:api && npm run test:template && npm run test:worker && npm run test:web && node scripts/test-phase1.mjs"
+  },
+  "keywords": [
+    "android",
+    "apk",
+    "webview",
+    "vite",
+    "react",
+    "express",
+    "postgresql",
+    "bullmq",
+    "redis"
+  ],
+  "author": "",
+  "license": "MIT"
+}

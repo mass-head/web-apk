@@ -1,0 +1,17 @@
+
+> web2apk-monorepo@1.0.0 dev:web
+> npm --workspace=@web2apk/web run dev
+
+
+> @web2apk/web@1.0.0 dev
+> vite
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m985[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.2:[1m5173[22m/[39m
+[2m9:57:19 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/HomePage.tsx, /src/pages/JobProgressPage.tsx, /src/pages/DownloadPage.tsx, /src/components/forms/UrlConversionForm.tsx, /src/components/forms/ZipConversionForm.tsx[22m
+[2m9:57:36 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/forms/UrlConversionForm.tsx, /src/index.css[22m
+[2m10:22:41 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/HomePage.tsx, /src/pages/JobProgressPage.tsx, /src/pages/DownloadPage.tsx, /src/components/forms/UrlConversionForm.tsx, /src/components/forms/ZipConversionForm.tsx[22m
+[2m10:23:02 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/JobProgressPage.tsx, /src/index.css[22m
