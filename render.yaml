@@ -7,3 +7,16 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Long Android builds: Gradle gets 15 minutes, the job watchdog 20.
+      - key: GRADLE_TIMEOUT_MS
+        value: "900000"
+      - key: JOB_TIMEOUT_MS
+        value: "1200000"
+      - key: GRADLE_MAX_HEAP
+        value: "2048m"
+      - key: GRADLE_MAX_METASPACE
+        value: "512m"
+      - key: GRADLE_OFFLINE
+        value: "true"
+      - key: BUILD_CONCURRENCY
+        value: "1"

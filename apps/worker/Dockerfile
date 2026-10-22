@@ -82,8 +82,13 @@ ENV GRADLE_USER_HOME="/home/builder/.gradle"
 ENV ANDROID_TEMPLATE_DIR="/opt/android-template"
 ENV WORKSPACE_BASE_DIR="/tmp/web2apk-builds"
 
-# Pre-extract Gradle wrapper binary
-RUN cd /opt/android-template && ./gradlew --version --no-daemon
+# Pre-extract the Gradle wrapper and warm the dependency cache. Offline builds
+# rely on this cache; compile-only tasks resolve AGP/Kotlin/AndroidX/AAPT2
+# without requiring signing credentials or packaging an APK.
+RUN cd /opt/android-template \
+    && ./gradlew :app:compileDebugKotlin :app:compileReleaseKotlin \
+        --no-daemon --console=plain \
+    && rm -rf app/build build .gradle
 
 # Copy compiled TypeScript worker
 COPY --from=app-builder --chown=builder:builder /app/package*.json /app/

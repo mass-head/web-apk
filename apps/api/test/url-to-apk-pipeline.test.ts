@@ -174,7 +174,7 @@ describe('URL-to-APK End-to-End Pipeline Tests', () => {
       expect(downloadRes.headers['content-type']).toContain('application/vnd.android.package-archive');
       expect(downloadRes.headers['content-disposition']).toMatch(/controlled-test-app(\.apk|-debug\.apk)/);
       expect(parseInt(downloadRes.headers['content-length'], 10)).toBe(artifact.fileSizeBytes);
-    }, 300000); // Allow sufficient time for real Gradle build
+    }, 1200000); // Allow sufficient time for real Gradle build
   });
 
   // ==========================================================================

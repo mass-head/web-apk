@@ -1,6 +1,7 @@
 import { Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import { env } from '../config/env.js';
+import { resolveQueueLockDurationMs } from '../config/timeouts.js';
 import { JobQueuePayload } from './types.js';
 import { processConversionJob } from './build-worker.js';
 
@@ -80,6 +81,11 @@ export function initWorker(): Worker | null {
   if (!redis || !isRedisAvailable) return null;
 
   try {
+    const lockDuration = resolveQueueLockDurationMs(
+      env.JOB_TIMEOUT_MS,
+      env.GRADLE_TIMEOUT_MS
+    );
+
     conversionWorker = new Worker(
       QUEUE_NAME,
       async (job) => {
@@ -87,7 +93,12 @@ export function initWorker(): Worker | null {
       },
       {
         connection: redis,
-        concurrency: 2,
+        concurrency: env.BUILD_CONCURRENCY,
+        // Keep the job lock alive for the entire build instead of allowing
+        // BullMQ to mark long-running Gradle compilations as stalled.
+        lockDuration,
+        lockRenewTime: Math.floor(lockDuration / 3),
+        stalledInterval: Math.min(60_000, Math.floor(lockDuration / 4)),
       }
     );
 

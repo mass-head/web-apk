@@ -154,7 +154,7 @@ docker run --rm \
 2. **Process Limit**: `pids-limit 500` prevents fork-bombing the host kernel.
 3. **Memory Capping**: Strictly constrained to 4GB RAM with swap disabled or matched.
 4. **Read-Only Root Filesystem**: Protects system binaries from modification.
-5. **Hard Process Timeout**: The runner wraps Gradle executions in a 10-minute timeout with `SIGTERM` followed by `SIGKILL` after 10 seconds.
+5. **Hard Process Timeout**: The runner wraps Gradle executions in a configurable `GRADLE_TIMEOUT_MS` timeout (15 minutes by default) and terminates the entire process tree (`SIGKILL` on POSIX, `taskkill /T /F` on Windows).
 6. **Ephemeral Cleanup**: Build directories on disk are purged after completion or error.
 
 ---

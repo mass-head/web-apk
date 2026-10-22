@@ -1,8 +1,29 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from 'path';
+import {
+  DEFAULT_GRADLE_TIMEOUT_MS,
+  DEFAULT_JOB_TIMEOUT_MS,
+  parseTimeoutMs,
+  resolveGradleTimeoutMs,
+  resolveJobTimeoutMs,
+  resolveMemoryValue,
+} from './timeouts.js';
 
 dotenv.config();
+
+const timeoutField = (fallback: number) =>
+  z.preprocess((value) => parseTimeoutMs(value, fallback), z.number().int());
+
+const booleanField = (fallback: boolean) =>
+  z.preprocess((value) => {
+    if (value === undefined || value === null || value === '') return fallback;
+    if (typeof value === 'boolean') return value;
+    const normalized = String(value).trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+    return fallback;
+  }, z.boolean());
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
@@ -27,6 +48,10 @@ const envSchema = z.object({
   REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z.coerce.number().default(6379),
   REDIS_PASSWORD: z.string().optional(),
+  BUILD_CONCURRENCY: z.preprocess((value) => {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 8 ? parsed : 1;
+  }, z.number().int()),
 
   // Object Storage
   STORAGE_DRIVER: z.enum(['s3', 'local']).default('local'),
@@ -44,10 +69,30 @@ const envSchema = z.object({
   MAX_CONCURRENT_JOBS_PER_USER: z.coerce.number().default(5),
   DAILY_CONVERSIONS_PER_USER: z.coerce.number().default(20),
 
-  // File Upload Limits & Job Timeout
+  // File Upload Limits & Build Timings
   MAX_UPLOAD_SIZE_BYTES: z.coerce.number().default(1073741824), // 1 GB
-  JOB_TIMEOUT_MS: z.coerce.number().default(600000), // 10 minutes
+  JOB_TIMEOUT_MS: timeoutField(DEFAULT_JOB_TIMEOUT_MS),
+  GRADLE_TIMEOUT_MS: timeoutField(DEFAULT_GRADLE_TIMEOUT_MS),
+  GRADLE_COMPILATION_TIMEOUT_MS: timeoutField(DEFAULT_GRADLE_TIMEOUT_MS),
+  GRADLE_MAX_HEAP: z.string().default('2048m'),
+  GRADLE_MAX_METASPACE: z.string().default('512m'),
+  GRADLE_OFFLINE: booleanField(true),
 });
 
-export const env = envSchema.parse(process.env);
-export type Env = z.infer<typeof envSchema>;
+const parsed = envSchema.parse(process.env);
+const gradleTimeoutMs = resolveGradleTimeoutMs(process.env);
+
+export const env = {
+  ...parsed,
+  GRADLE_TIMEOUT_MS: gradleTimeoutMs,
+  // Keep the legacy alias populated with the effective value.
+  GRADLE_COMPILATION_TIMEOUT_MS: gradleTimeoutMs,
+  JOB_TIMEOUT_MS: resolveJobTimeoutMs(gradleTimeoutMs, process.env),
+  GRADLE_MAX_HEAP: resolveMemoryValue(process.env.GRADLE_MAX_HEAP, '2048m'),
+  GRADLE_MAX_METASPACE: resolveMemoryValue(
+    process.env.GRADLE_MAX_METASPACE,
+    '512m'
+  ),
+};
+
+export type Env = typeof env;

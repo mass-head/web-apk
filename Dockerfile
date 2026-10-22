@@ -54,8 +54,14 @@ COPY . .
 RUN npm install
 RUN npm run build
 
-# Ensure Gradle wrapper is executable
-RUN chmod +x packages/android-template/gradlew || true
+# Ensure Gradle wrapper is executable and pre-warm the dependency cache used
+# by offline builds. Compile-only tasks avoid packaging/signing but still
+# resolve AGP, Kotlin, AndroidX and AAPT2 artifacts.
+RUN chmod +x packages/android-template/gradlew \
+    && cd packages/android-template \
+    && ./gradlew :app:compileDebugKotlin :app:compileReleaseKotlin \
+        --no-daemon --console=plain \
+    && rm -rf app/build build .gradle
 
 ENV NODE_ENV=production
 ENV PORT=4000

@@ -1,8 +1,58 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawn, ChildProcess } from 'node:child_process';
+import { spawn, execSync, ChildProcess } from 'node:child_process';
 import { workerEnv } from '../config/worker-env.js';
 import { logger } from '../monitoring/logger.js';
+import {
+  BuildProcessError,
+  classifyBuildFailure,
+} from './build-diagnostics.js';
+
+/**
+ * Applies deployment-specific JVM memory limits to the job's
+ * gradle.properties so the daemon does not use template defaults.
+ */
+function applyGradleMemorySettings(workspace: string): void {
+  const propertiesPath = path.join(workspace, 'gradle.properties');
+  const jvmArgs = `-Xmx${workerEnv.GRADLE_MAX_HEAP} -XX:MaxMetaspaceSize=${workerEnv.GRADLE_MAX_METASPACE} -Dfile.encoding=UTF-8`;
+
+  try {
+    const existing = fs.existsSync(propertiesPath)
+      ? fs.readFileSync(propertiesPath, 'utf8')
+      : '';
+    const retainedLines = existing
+      .split(/\r?\n/)
+      .filter((line) => !line.trim().startsWith('org.gradle.jvmargs='));
+    const next = `${retainedLines.join('\n').trimEnd()}\norg.gradle.jvmargs=${jvmArgs}\n`;
+    fs.writeFileSync(propertiesPath, next, 'utf8');
+  } catch (err: any) {
+    logger.warn(`Could not apply Gradle memory settings: ${err.message}`);
+  }
+}
+
+function terminateProcessTree(child: ChildProcess | undefined): void {
+  if (!child || !child.pid) return;
+  const isWindows = process.platform === 'win32';
+
+  try {
+    if (isWindows) {
+      execSync(`taskkill /pid ${child.pid} /T /F`, { stdio: 'ignore' });
+      return;
+    }
+
+    try {
+      process.kill(-child.pid, 'SIGKILL');
+    } catch {
+      child.kill('SIGKILL');
+    }
+  } catch {
+    try {
+      child.kill('SIGKILL');
+    } catch {
+      // Process already exited.
+    }
+  }
+}
 
 export interface GradleRunnerOptions {
   workspace: string;
@@ -95,22 +145,30 @@ export class GradleRunner {
       workspace,
       conversionId,
       variant = 'release',
-      timeoutMs = workerEnv.GRADLE_COMPILATION_TIMEOUT_MS,
+      timeoutMs = workerEnv.GRADLE_TIMEOUT_MS,
       onProgress,
       onLog,
       cancelSignal,
     } = options;
 
+    const offlineArgs = workerEnv.GRADLE_OFFLINE ? ['--offline'] : [];
     const defaultTasks = variant === 'release'
-      ? ['assembleRelease', '--offline', '--no-daemon']
-      : ['assembleDebug', '--offline', '--no-daemon'];
+      ? ['assembleRelease', ...offlineArgs, '--no-daemon']
+      : ['assembleDebug', ...offlineArgs, '--no-daemon'];
     const tasks = options.tasks || defaultTasks;
+
+    applyGradleMemorySettings(workspace);
 
     const env = resolveEnvironment();
     const isWindows = process.platform === 'win32';
     const gradleCmd = isWindows ? 'gradlew.bat' : './gradlew';
+    const buildStartedAt = Date.now();
 
-    logger.info(`Starting Gradle compilation: ${gradleCmd} ${tasks.join(' ')}`, conversionId);
+    logger.info(
+      `Starting Gradle compilation: ${gradleCmd} ${tasks.join(' ')} ` +
+        `(timeout=${Math.round(timeoutMs / 1000)}s, heap=${workerEnv.GRADLE_MAX_HEAP}, offline=${workerEnv.GRADLE_OFFLINE})`,
+      conversionId
+    );
 
     return new Promise<string>((resolve, reject) => {
       let child: ChildProcess;
@@ -119,6 +177,7 @@ export class GradleRunner {
           cwd: workspace,
           env,
           shell: isWindows,
+          detached: !isWindows,
         });
 
         // Close standard input immediately
@@ -189,23 +248,23 @@ export class GradleRunner {
       // Check cancellation periodically
       const cancelInterval = setInterval(() => {
         if (cancelSignal?.cancelled) {
-          try {
-            child.kill(isWindows ? undefined : 'SIGKILL');
-          } catch {
-            // Ignore kill error
-          }
+          terminateProcessTree(child);
           safeReject(new Error('Compilation cancelled by user request.'));
         }
       }, 500);
 
-      // Hard timeout timer
+      // Hard timeout timer. The limit is configurable because cold Gradle
+      // builds and dependency resolution routinely exceed five minutes.
       const timeoutTimer = setTimeout(() => {
-        try {
-          child.kill(isWindows ? undefined : 'SIGKILL');
-        } catch {
-          // Ignore
-        }
-        safeReject(new Error(`Gradle compilation timed out after ${Math.round(timeoutMs / 1000)} seconds.`));
+        const durationMs = Date.now() - buildStartedAt;
+        terminateProcessTree(child);
+        const error = new Error(
+          `Gradle compilation timed out after ${Math.round(timeoutMs / 1000)} seconds.`
+        ) as BuildProcessError;
+        error.timedOut = true;
+        error.logs = compilerLogs;
+        error.durationMs = durationMs;
+        safeReject(error);
       }, timeoutMs);
 
       child.stdout?.on('data', (chunk) => {
@@ -249,12 +308,28 @@ export class GradleRunner {
         }
       });
 
+      const rejectWithProcessError = (code: number | null) => {
+        const classified = classifyBuildFailure(
+          new Error(`Gradle compilation failed with exit code ${code ?? 'unknown'}.`),
+          { workspace, logs: compilerLogs }
+        );
+        const error = new Error(classified.message) as BuildProcessError;
+        error.code = classified.code;
+        error.exitCode = code;
+        error.logs = compilerLogs;
+        error.durationMs = Date.now() - buildStartedAt;
+        safeReject(error);
+      };
+
       child.on('exit', (code) => {
         if (code === 0) {
+          logger.info(
+            `Gradle compilation completed in ${Math.round((Date.now() - buildStartedAt) / 1000)}s`,
+            conversionId
+          );
           safeResolve(resolveApkPath());
         } else if (code !== null) {
-          const recentLogs = compilerLogs.slice(-1000);
-          safeReject(new Error(`Gradle compilation failed with exit code ${code}.\n${recentLogs}`));
+          rejectWithProcessError(code);
         }
       });
 
@@ -263,13 +338,15 @@ export class GradleRunner {
           const apkPath = path.join(workspace, 'app/build/outputs/apk/debug/app-debug.apk');
           safeResolve(apkPath);
         } else if (code !== null) {
-          const recentLogs = compilerLogs.slice(-1000);
-          safeReject(new Error(`Gradle compilation failed with exit code ${code}.\n${recentLogs}`));
+          rejectWithProcessError(code);
         }
       });
 
       child.on('error', (err) => {
-        safeReject(err);
+        const processError = err as BuildProcessError;
+        processError.logs = compilerLogs;
+        processError.durationMs = Date.now() - buildStartedAt;
+        safeReject(processError);
       });
     });
   }

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawn, execSync } from 'node:child_process';
+import { spawn, execSync, ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { JobQueuePayload, ConversionRecord, ArtifactMetadata } from './types.js';
 import { ConversionRepository } from '../db/repository.js';
@@ -11,9 +11,66 @@ import { verifyApk } from './apk-verifier.js';
 import { generateAndroidIcons } from './icon-generator.js';
 import { validateUrlReachability } from '../validation/ssrf.validator.js';
 import { validateZipArchive, extractSanitizedZipToWorkspace } from '../validation/zip.validator.js';
+import { env as appEnv } from '../config/env.js';
+import {
+  BuildProcessError,
+  classifyBuildFailure,
+} from './build-diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * Applies the configured JVM memory limits to the per-job Gradle project.
+ * gradle.properties in the template provides conservative defaults, but the
+ * deployment's environment must win so operators can tune memory per instance.
+ */
+function applyGradleMemorySettings(workspace: string): void {
+  const propertiesPath = path.join(workspace, 'gradle.properties');
+  const jvmArgs = `-Xmx${appEnv.GRADLE_MAX_HEAP} -XX:MaxMetaspaceSize=${appEnv.GRADLE_MAX_METASPACE} -Dfile.encoding=UTF-8`;
+
+  try {
+    const existing = fs.existsSync(propertiesPath)
+      ? fs.readFileSync(propertiesPath, 'utf8')
+      : '';
+    const retainedLines = existing
+      .split(/\r?\n/)
+      .filter((line) => !line.trim().startsWith('org.gradle.jvmargs='));
+    const next = `${retainedLines.join('\n').trimEnd()}\norg.gradle.jvmargs=${jvmArgs}\n`;
+    fs.writeFileSync(propertiesPath, next, 'utf8');
+  } catch (err: any) {
+    console.warn(`[Worker] Could not apply Gradle memory settings: ${err.message}`);
+  }
+}
+
+/**
+ * Terminates the Gradle process and all of its compiler/AAPT2 children.
+ * On Windows the wrapper is a cmd shell, so killing only the shell would leave
+ * the Java daemon and compiler subprocesses running.
+ */
+function terminateProcessTree(child: ChildProcess | undefined): void {
+  if (!child || !child.pid) return;
+  const isWindows = process.platform === 'win32';
+
+  try {
+    if (isWindows) {
+      execSync(`taskkill /pid ${child.pid} /T /F`, { stdio: 'ignore' });
+      return;
+    }
+
+    try {
+      process.kill(-child.pid, 'SIGKILL');
+    } catch {
+      child.kill('SIGKILL');
+    }
+  } catch {
+    try {
+      child.kill('SIGKILL');
+    } catch {
+      // Process already exited.
+    }
+  }
+}
 
 /**
  * Resolves the path to the reusable native Android template
@@ -132,8 +189,9 @@ export function resolveEnvironment(): NodeJS.ProcessEnv {
     env.ANDROID_HOME = env.ANDROID_SDK_ROOT;
   }
 
-  // Set memory limits for Gradle worker daemon
-  env.GRADLE_OPTS = '-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8';
+  // Set memory limits for the Gradle client/launcher. The daemon JVM limits
+  // are written into each job's gradle.properties by applyGradleMemorySettings.
+  env.GRADLE_OPTS = `-Xmx${appEnv.GRADLE_MAX_HEAP} -XX:MaxMetaspaceSize=${appEnv.GRADLE_MAX_METASPACE} -Dfile.encoding=UTF-8`;
 
   // Inject into PATH / Path
   const pathKey = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') || 'PATH';
@@ -531,12 +589,20 @@ export async function processConversionJob(
     // ------------------------------------------------------------------------
     // STAGE 3: GRADLE 8.5 COMPILATION (Progress: 40% -> 80%)
     // ------------------------------------------------------------------------
+    const gradleTimeoutMs = appEnv.GRADLE_TIMEOUT_MS;
+    const offlineArgs = appEnv.GRADLE_OFFLINE ? ['--offline'] : [];
+    const gradleStageMessage = appEnv.GRADLE_OFFLINE
+      ? '[Worker] Invoking isolated Gradle compiler (network egress restricted with --offline)...'
+      : '[Worker] Invoking isolated Gradle compiler (online dependency resolution enabled)...';
+
     await publish(
       'building',
       40,
       'Compiling Android APK with Gradle 8.5',
-      `[Worker] Invoking isolated Gradle compiler (network egress restricted with --offline)...`
+      `${gradleStageMessage} Gradle timeout: ${Math.round(gradleTimeoutMs / 1000)}s, heap: ${appEnv.GRADLE_MAX_HEAP}.`
     );
+
+    applyGradleMemorySettings(workspace);
 
     const env = resolveEnvironment();
     const isWindows = process.platform === 'win32';
@@ -544,17 +610,19 @@ export async function processConversionJob(
 
     const apkVariant = options.variant || (options.gradleArgs?.some((a) => a.includes('Debug')) ? 'debug' : 'release');
     const defaultArgs = apkVariant === 'release'
-      ? ['assembleRelease', '--offline', '--no-daemon']
-      : ['assembleDebug', '--offline', '--no-daemon'];
+      ? ['assembleRelease', ...offlineArgs, '--no-daemon']
+      : ['assembleDebug', ...offlineArgs, '--no-daemon'];
 
-    // Execute Gradle assembleRelease/assembleDebug in offline mode
+    // Execute Gradle assembleRelease/assembleDebug with an isolated workspace
     await new Promise<void>((resolve, reject) => {
       const args = options.gradleArgs || defaultArgs;
+      const buildStartedAt = Date.now();
 
       const child = spawn(gradleCmd, args, {
         cwd: workspace,
         env,
         shell: isWindows,
+        detached: !isWindows,
       });
 
       // Close standard input immediately so cmd/gradle never waits on user input
@@ -564,11 +632,12 @@ export async function processConversionJob(
       let progressVal = 40;
       let isSettled = false;
       let lastDbUpdate = 0;
+      let timeoutTimer: NodeJS.Timeout | undefined;
 
       const safeResolve = () => {
         if (!isSettled) {
           isSettled = true;
-          clearTimeout(timer);
+          if (timeoutTimer) clearTimeout(timeoutTimer);
           resolve();
         }
       };
@@ -576,7 +645,7 @@ export async function processConversionJob(
       const safeReject = (err: Error) => {
         if (!isSettled) {
           isSettled = true;
-          clearTimeout(timer);
+          if (timeoutTimer) clearTimeout(timeoutTimer);
           reject(err);
         }
       };
@@ -678,25 +747,38 @@ export async function processConversionJob(
         }
       });
 
-      // Strict compilation timeout: 5 minutes (Windows cold Gradle daemons take 2-3 mins)
-      const timer = setTimeout(() => {
-        try {
-          if (process.platform === 'win32' && child.pid) {
-            execSync(`taskkill /pid ${child.pid} /T /F`, { stdio: 'ignore' });
-          } else {
-            child.kill();
-          }
-        } catch {
-          // Ignore kill error
-        }
-        safeReject(new Error('Gradle compilation timed out after 300 seconds.'));
-      }, 300000);
+      const rejectWithProcessError = (code: number | null) => {
+        const error = new Error(
+          `Gradle compilation failed with exit code ${code ?? 'unknown'}.`
+        ) as BuildProcessError;
+        error.exitCode = code;
+        error.logs = compilerLogs;
+        error.durationMs = Date.now() - buildStartedAt;
+        safeReject(error);
+      };
+
+      // Configurable watchdog. It must exceed the slowest legitimate cold
+      // build; 15 minutes is the default, and operators can raise it.
+      timeoutTimer = setTimeout(() => {
+        const durationMs = Date.now() - buildStartedAt;
+        terminateProcessTree(child);
+        const error = new Error(
+          `Gradle compilation timed out after ${Math.round(gradleTimeoutMs / 1000)} seconds.`
+        ) as BuildProcessError;
+        error.timedOut = true;
+        error.logs = compilerLogs;
+        error.durationMs = durationMs;
+        safeReject(error);
+      }, gradleTimeoutMs);
 
       child.on('exit', (code) => {
         if (code === 0) {
+          console.log(
+            `[Worker] Gradle build completed in ${Math.round((Date.now() - buildStartedAt) / 1000)}s (${conversionId}).`
+          );
           safeResolve();
         } else if (code !== null) {
-          safeReject(new Error(`Gradle compilation failed with exit code ${code}.\n${compilerLogs.slice(-1000)}`));
+          rejectWithProcessError(code);
         }
       });
 
@@ -704,12 +786,15 @@ export async function processConversionJob(
         if (code === 0) {
           safeResolve();
         } else if (code !== null) {
-          safeReject(new Error(`Gradle compilation failed with exit code ${code}.\n${compilerLogs.slice(-1000)}`));
+          rejectWithProcessError(code);
         }
       });
 
       child.on('error', (err) => {
-        safeReject(err);
+        const processError = err as BuildProcessError;
+        processError.logs = compilerLogs;
+        processError.durationMs = Date.now() - buildStartedAt;
+        safeReject(processError);
       });
     });
 
@@ -841,14 +926,29 @@ export async function processConversionJob(
     } else {
       rawMessage = error?.stderr?.toString()?.trim() || String(error || '');
     }
-    const errorMsg = rawMessage || 'Unknown build worker failure.';
+    const isGradleFailure =
+      error?.timedOut === true ||
+      typeof error?.exitCode === 'number' ||
+      /gradle compilation/i.test(rawMessage);
+    const classified = isGradleFailure
+      ? classifyBuildFailure(error, { workspace, logs: error?.logs })
+      : null;
+    const errorCode = classified?.code ?? 'BUILD_FAILED';
+    const errorMsg =
+      classified?.message || rawMessage || 'Unknown build worker failure.';
+
+    if (classified) {
+      console.error(
+        `[Worker Error in conversion ${conversionId}] ${classified.code}: ${errorMsg}`
+      );
+    }
 
     const finalStage = current?.stageName || 'Build failed';
     const finalProgress = current?.progress || 100;
 
     await ConversionRepository.updateStatus(conversionId, {
       status: 'failed',
-      errorCode: 'BUILD_FAILED',
+      errorCode,
       errorMessage: errorMsg,
       completedAt: new Date().toISOString(),
     });

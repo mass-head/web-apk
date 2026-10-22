@@ -63,7 +63,7 @@ This guide details the step-by-step procedures to deploy the Web2APK platform to
 | **Redis** | Redis 7 Alpine | 100m | 256 MiB | 5 GiB Persistent (`AOF`) | Memory usage > 75% |
 
 > [!IMPORTANT]
-> **Android Worker Memory Sizing**: Android Gradle compilation invokes both the Kotlin compiler and AAPT2 resource linkers simultaneously. Setting worker container memory limits below **4 GB** (`4096Mi`) risks unexpected OOM crashes (`exit code 137`). Ensure `GRADLE_OPTS="-Xmx2048m -XX:MaxMetaspaceSize=512m"` is strictly configured.
+> **Android Worker Memory Sizing**: Android Gradle compilation invokes both the Kotlin compiler and AAPT2 resource linkers simultaneously. Setting worker container memory limits below **4 GB** (`4096Mi`) risks unexpected OOM crashes (`exit code 137`). The build writes `GRADLE_MAX_HEAP` and `GRADLE_MAX_METASPACE` into each job's `gradle.properties` and also exports them via `GRADLE_OPTS`; increasing timeouts alone does not fix insufficient memory or CPU.
 
 ---
 
@@ -90,7 +90,10 @@ This guide details the step-by-step procedures to deploy the Web2APK platform to
 | `API_KEY_SECRET` | Master API Key for administration | (min 32 random characters) | **Secret** |
 | `CORS_ORIGIN` | Allowed CORS origins | `https://web2apk.dev` | Public |
 | `MAX_UPLOAD_SIZE_BYTES`| Maximum static website ZIP size | `104857600` (100 MB) | Public |
-| `JOB_TIMEOUT_MS` | Job hard execution timeout | `600000` (10 minutes) | Public |
+| `JOB_TIMEOUT_MS` | Job hard execution timeout | `1200000` (20 minutes) | Public |
+| `GRADLE_TIMEOUT_MS` | Gradle compilation timeout | `900000` (15 minutes) | Public |
+| `GRADLE_OFFLINE` | Run Gradle with `--offline` (requires pre-warmed cache) | `true` | Public |
+| `BUILD_CONCURRENCY` | In-process API build concurrency | `1` | Public |
 
 ### 3.2 Android Build Worker (`apps/worker/.env`)
 
@@ -98,12 +101,14 @@ This guide details the step-by-step procedures to deploy the Web2APK platform to
 | :--- | :--- | :--- | :--- |
 | `WORKER_ID` | Unique worker instance identifier | `worker-${POD_NAME}` | Internal |
 | `WORKER_CONCURRENCY`| Maximum concurrent Gradle jobs per pod | `2` | Public |
+| `BUILD_TIMEOUT_MS` | Hard job timeout (kept above `GRADLE_TIMEOUT_MS`) | `1200000` (20 minutes) | Public |
 | `QUEUE_NAME` | BullMQ queue identifier | `android-conversions` | Internal |
 | `WORKSPACE_BASE_DIR` | Working directory for isolated builds | `/tmp/web2apk-builds` | Internal |
 | `ANDROID_TEMPLATE_DIR`| Immutable path to trusted template | `/opt/android-template` | Internal |
 | `GRADLE_MAX_HEAP` | Maximum heap for Gradle daemon | `2048m` | Public |
 | `GRADLE_MAX_METASPACE`| Max Metaspace for Kotlin compiler | `512m` | Public |
-| `GRADLE_COMPILATION_TIMEOUT_MS`| Hard compile timeout | `300000` (5 minutes) | Public |
+| `GRADLE_TIMEOUT_MS`| Hard compile timeout (legacy alias: `GRADLE_COMPILATION_TIMEOUT_MS`) | `900000` (15 minutes) | Public |
+| `GRADLE_OFFLINE`| Run Gradle with `--offline` | `true` | Public |
 | `HEALTH_PORT` | Worker health/readiness probe port | `4001` | Public |
 | `CLEANUP_INTERVAL_MS`| Workspace sweeper interval | `300000` (5 minutes) | Public |
 | `ARTIFACT_TTL_HOURS` | Retention period before APK deletion | `24` | Public |

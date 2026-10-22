@@ -145,7 +145,7 @@ describe('Web2APK Comprehensive End-to-End Audit Suite', () => {
       expect(updated?.progress).toBe(100);
       expect(updated?.stageName).toBe('Build completed successfully');
       expect(updated?.artifact).toBeDefined();
-    }, 300000);
+    }, 1200000);
 
     it('permits authorized APK download with signed token', async () => {
       const res = await request(app)
@@ -228,7 +228,7 @@ describe('Web2APK Comprehensive End-to-End Audit Suite', () => {
       expect(updated?.status).toBe('completed');
       expect(updated?.progress).toBe(100);
       expect(updated?.artifact).toBeDefined();
-    }, 300000);
+    }, 1200000);
 
     it('downloads the generated Local-mode APK and verifies internal structure', async () => {
       const res = await request(app)

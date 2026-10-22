@@ -26,9 +26,12 @@
         { "name": "S3_REGION", "value": "us-east-1" },
         { "name": "S3_BUCKET_NAME", "value": "web2apk-artifacts" },
         { "name": "WORKSPACE_BASE_DIR", "value": "/tmp/web2apk-builds" },
-        { "name": "BUILD_TIMEOUT_MS", "value": "600000" },
-        { "name": "GRADLE_COMPILATION_TIMEOUT_MS", "value": "300000" },
+        { "name": "BUILD_TIMEOUT_MS", "value": "1200000" },
+        { "name": "GRADLE_TIMEOUT_MS", "value": "900000" },
+        { "name": "GRADLE_COMPILATION_TIMEOUT_MS", "value": "900000" },
         { "name": "GRADLE_MAX_HEAP", "value": "2048m" },
+        { "name": "GRADLE_MAX_METASPACE", "value": "512m" },
+        { "name": "GRADLE_OFFLINE", "value": "true" },
         { "name": "HEALTH_PORT", "value": "4001" }
       ],
       "secrets": [

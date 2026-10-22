@@ -50,7 +50,7 @@ Web2APK is built on a distributed architecture where the frontend and API gatewa
   - PostgreSQL schema and connection pool (`pg.Pool`) storing full conversion metadata, audit timestamps, and artifact hashes.
   - In-memory repository fallback for standalone testing when PostgreSQL is offline.
 - **Job Management** ([`apps/api/src/jobs/`](file:///d:/web-apk/apps/api/src/jobs/)):
-  - BullMQ queue producer (`android-conversions`) with 10-minute timeout, exponential backoff retries, and job cancellation.
+  - BullMQ queue producer (`android-conversions`) with a configurable 20-minute job timeout (15-minute Gradle timeout), exponential backoff retries, and job cancellation.
   - **Zero Gradle Builds in HTTP Handlers**: Compilation jobs are strictly dispatched to background workers.
   - Redis PubSub Event Broker broadcasting real-time progress and logs to SSE clients.
 - **Storage** ([`apps/api/src/storage/`](file:///d:/web-apk/apps/api/src/storage/)):
@@ -212,7 +212,8 @@ cp apps/api/.env.example apps/api/.env
 | `JWT_SECRET` | Secret key for signed download tokens | `placeholder` |
 | `API_KEY_SECRET` | Secret key for admin API calls | `placeholder` |
 | `MAX_UPLOAD_SIZE_BYTES` | Max size for ZIP uploads | `104857600` (100 MB) |
-| `JOB_TIMEOUT_MS` | Job hard execution timeout | `600000` (10 mins) |
+| `JOB_TIMEOUT_MS` | Job hard execution timeout | `1200000` (20 mins) |
+| `GRADLE_TIMEOUT_MS` | Gradle compilation timeout | `900000` (15 mins) |
 
 ---
 
