@@ -1,3 +1,4 @@
+
 import { app } from './app.js';
 import { env } from './config/env.js';
 import { initDatabase, pool } from './db/client.js';
