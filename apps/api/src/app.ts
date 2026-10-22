@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
 import apiRouter from './routes/index.js';
 import { identifyUser } from './auth/auth.middleware.js';
@@ -37,6 +40,28 @@ if (env.NODE_ENV !== 'test') {
 
 // Routes
 app.use('/api', apiRouter);
+
+// Serve built React frontend
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const candidates = [
+  path.resolve(__dirname, '../../web/dist'),      // running from apps/api/src
+  path.resolve(__dirname, '../../../web/dist'),   // running from apps/api/dist/src
+  path.resolve(process.cwd(), 'apps/web/dist'),   // started from repo root
+  path.resolve(process.cwd(), '../web/dist'),     // started from apps/api
+  path.resolve('/app/apps/web/dist'),             // Docker path
+];
+const webDist = candidates.find((p) => fs.existsSync(path.join(p, 'index.html')));
+
+if (webDist) {
+  console.log(`Serving frontend from: ${webDist}`);
+  app.use(express.static(webDist));
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(webDist, 'index.html'));
+  });
+} else {
+  console.warn('Frontend build NOT found. Tried:', candidates);
+}
 
 // 404 Handler
 app.use((req, res) => {
