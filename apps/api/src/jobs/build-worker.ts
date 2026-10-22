@@ -763,11 +763,15 @@ export async function processConversionJob(
         const durationMs = Date.now() - buildStartedAt;
         terminateProcessTree(child);
         const error = new Error(
-          `Gradle compilation timed out after ${Math.round(gradleTimeoutMs / 1000)} seconds.`
+          `Gradle compilation timed out after ${Math.round(gradleTimeoutMs / 1000)} seconds ` +
+            `(elapsed ${Math.round(durationMs / 1000)}s, limit ${gradleTimeoutMs}ms).`
         ) as BuildProcessError;
         error.timedOut = true;
         error.logs = compilerLogs;
         error.durationMs = durationMs;
+        console.error(
+          `[Worker] Gradle timeout fired for ${conversionId}: effectiveTimeoutMs=${gradleTimeoutMs} elapsedMs=${durationMs}`
+        );
         safeReject(error);
       }, gradleTimeoutMs);
 

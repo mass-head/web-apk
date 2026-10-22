@@ -29,13 +29,13 @@ describe('Build timeout configuration', () => {
     expect(parseTimeoutMs('', 1234)).toBe(1234);
   });
 
-  it('accepts canonical and legacy Gradle timeout variables', () => {
+  it('uses the canonical variable and ignores the obsolete 300s variable', () => {
     expect(resolveGradleTimeoutMs({ GRADLE_TIMEOUT_MS: '1200000' })).toBe(
       1_200_000
     );
     expect(
-      resolveGradleTimeoutMs({ GRADLE_COMPILATION_TIMEOUT_MS: '600000' })
-    ).toBe(600_000);
+      resolveGradleTimeoutMs({ GRADLE_COMPILATION_TIMEOUT_MS: '300000' })
+    ).toBe(DEFAULT_GRADLE_TIMEOUT_MS);
     expect(
       resolveGradleTimeoutMs({
         GRADLE_TIMEOUT_MS: '1200000',

@@ -107,11 +107,48 @@ This guide details the step-by-step procedures to deploy the Web2APK platform to
 | `ANDROID_TEMPLATE_DIR`| Immutable path to trusted template | `/opt/android-template` | Internal |
 | `GRADLE_MAX_HEAP` | Maximum heap for Gradle daemon | `2048m` | Public |
 | `GRADLE_MAX_METASPACE`| Max Metaspace for Kotlin compiler | `512m` | Public |
-| `GRADLE_TIMEOUT_MS`| Hard compile timeout (legacy alias: `GRADLE_COMPILATION_TIMEOUT_MS`) | `900000` (15 minutes) | Public |
+| `GRADLE_TIMEOUT_MS`| Hard compile timeout (`GRADLE_COMPILATION_TIMEOUT_MS` is ignored) | `900000` (15 minutes) | Public |
 | `GRADLE_OFFLINE`| Run Gradle with `--offline` | `true` | Public |
 | `HEALTH_PORT` | Worker health/readiness probe port | `4001` | Public |
 | `CLEANUP_INTERVAL_MS`| Workspace sweeper interval | `300000` (5 minutes) | Public |
 | `ARTIFACT_TTL_HOURS` | Retention period before APK deletion | `24` | Public |
+
+### 3.3 Verifying the Deployed Worker Timeout
+
+The `Gradle compilation timed out after 300 seconds` message can only come from
+an old build of `apps/worker/src/builder/gradle-runner.ts` or
+`apps/api/src/jobs/build-worker.ts`, or from the obsolete
+`GRADLE_COMPILATION_TIMEOUT_MS=300000` variable. It cannot be produced by the
+current code when `GRADLE_TIMEOUT_MS` is unset because the default is 900000 ms.
+
+1. Confirm the deployed commit in the worker startup log:
+   ```
+   Commit:          <RENDER_GIT_COMMIT>
+   Gradle Timeout:  900000 ms
+   Build Timeout:   1200000 ms
+   Queue Lock:      <value greater than Build Timeout> ms
+   ```
+2. Call the worker health endpoint and verify the effective values:
+   ```bash
+   curl -s https://<worker-host>/health | jq '.commit, .timeouts'
+   ```
+   `timeouts.gradleMs` must be `900000`, and `timeouts.queueLockMs` must be
+   larger than `timeouts.buildMs`.
+3. In the Render service environment, remove
+   `GRADLE_COMPILATION_TIMEOUT_MS` (it is ignored and logs a warning) and set
+   `GRADLE_TIMEOUT_MS=900000`, `BUILD_TIMEOUT_MS=1200000`.
+4. If the service is not a Docker service, confirm its build command compiles
+   the TypeScript before starting:
+   ```bash
+   npm install && npm run build:worker
+   ```
+   Starting a stale `apps/worker/dist/index.js` without rebuilding will keep the
+   old 300-second timer.
+5. Trigger one conversion and check the worker logs. A timeout must report the
+   effective limit and elapsed build time, for example:
+   ```
+   Gradle timeout fired: effectiveTimeoutMs=900000 elapsedMs=...
+   ```
 
 ---
 

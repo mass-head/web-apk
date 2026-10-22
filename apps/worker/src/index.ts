@@ -1,17 +1,28 @@
 import { workerEnv } from './config/worker-env.js';
+import { resolveQueueLockDurationMs } from './config/timeouts.js';
 import { logger } from './monitoring/logger.js';
 import { startHealthServer } from './monitoring/health.js';
 import { cleanupService } from './cleanup/cleanup-service.js';
 import { workerConsumer } from './consumer.js';
 
 async function main() {
+  const commit = process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || 'unknown';
+  const lockDurationMs = resolveQueueLockDurationMs(
+    workerEnv.BUILD_TIMEOUT_MS,
+    workerEnv.GRADLE_TIMEOUT_MS
+  );
+
   logger.info('====================================================');
-  logger.info(`🚀 Starting Web2APK Android Build Worker (${workerEnv.WORKER_ID})`);
+  logger.info(`dYs? Starting Web2APK Android Build Worker (${workerEnv.WORKER_ID})`);
+  logger.info(`Commit:          ${commit}`);
   logger.info(`Concurrency:     ${workerEnv.WORKER_CONCURRENCY}`);
   logger.info(`Queue:           ${workerEnv.QUEUE_NAME}`);
   logger.info(`Redis:           ${workerEnv.REDIS_HOST}:${workerEnv.REDIS_PORT}`);
   logger.info(`Storage Driver:  ${workerEnv.STORAGE_DRIVER}`);
   logger.info(`Workspace Base:  ${workerEnv.WORKSPACE_BASE_DIR}`);
+  logger.info(`Gradle Timeout:  ${workerEnv.GRADLE_TIMEOUT_MS} ms`);
+  logger.info(`Build Timeout:   ${workerEnv.BUILD_TIMEOUT_MS} ms`);
+  logger.info(`Queue Lock:      ${lockDurationMs} ms`);
   logger.info(`Health Port:     ${workerEnv.HEALTH_PORT}`);
   logger.info('====================================================');
 

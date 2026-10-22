@@ -28,7 +28,6 @@
         { "name": "WORKSPACE_BASE_DIR", "value": "/tmp/web2apk-builds" },
         { "name": "BUILD_TIMEOUT_MS", "value": "1200000" },
         { "name": "GRADLE_TIMEOUT_MS", "value": "900000" },
-        { "name": "GRADLE_COMPILATION_TIMEOUT_MS", "value": "900000" },
         { "name": "GRADLE_MAX_HEAP", "value": "2048m" },
         { "name": "GRADLE_MAX_METASPACE", "value": "512m" },
         { "name": "GRADLE_OFFLINE", "value": "true" },

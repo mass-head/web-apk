@@ -259,11 +259,17 @@ export class GradleRunner {
         const durationMs = Date.now() - buildStartedAt;
         terminateProcessTree(child);
         const error = new Error(
-          `Gradle compilation timed out after ${Math.round(timeoutMs / 1000)} seconds.`
+          `Gradle compilation timed out after ${Math.round(timeoutMs / 1000)} seconds ` +
+            `(elapsed ${Math.round(durationMs / 1000)}s, limit ${timeoutMs}ms).`
         ) as BuildProcessError;
         error.timedOut = true;
         error.logs = compilerLogs;
         error.durationMs = durationMs;
+        logger.error(
+          `Gradle timeout fired: effectiveTimeoutMs=${timeoutMs} elapsedMs=${durationMs}`,
+          conversionId,
+          'building'
+        );
         safeReject(error);
       }, timeoutMs);
 

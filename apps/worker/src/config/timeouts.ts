@@ -41,18 +41,33 @@ export function parseTimeoutMs(
 }
 
 /**
- * GRADLE_TIMEOUT_MS is the canonical setting. The previous
- * GRADLE_COMPILATION_TIMEOUT_MS name remains supported for compatibility.
+ * GRADLE_TIMEOUT_MS is the only setting used for the effective timeout.
+ *
+ * GRADLE_COMPILATION_TIMEOUT_MS was the old name and is intentionally ignored:
+ * deployments that still define it as 300000 must not silently override the
+ * 15-minute default. A warning is emitted by the env module so stale Render
+ * variables can be removed.
  */
 export function resolveGradleTimeoutMs(
   environment: NodeJS.ProcessEnv = process.env,
   fallback: number = DEFAULT_GRADLE_TIMEOUT_MS
 ): number {
-  return (
-    tryParseTimeoutMs(environment.GRADLE_TIMEOUT_MS) ??
-    tryParseTimeoutMs(environment.GRADLE_COMPILATION_TIMEOUT_MS) ??
-    fallback
-  );
+  return tryParseTimeoutMs(environment.GRADLE_TIMEOUT_MS) ?? fallback;
+}
+
+export function warnOnDeprecatedGradleTimeout(
+  environment: NodeJS.ProcessEnv = process.env
+): void {
+  if (
+    environment.GRADLE_COMPILATION_TIMEOUT_MS &&
+    !environment.GRADLE_TIMEOUT_MS
+  ) {
+    console.warn(
+      '[Config] GRADLE_COMPILATION_TIMEOUT_MS is deprecated and ignored. ' +
+        `Using GRADLE_TIMEOUT_MS=${DEFAULT_GRADLE_TIMEOUT_MS}. ` +
+        'Remove the old variable from the deployment environment.'
+    );
+  }
 }
 
 /**

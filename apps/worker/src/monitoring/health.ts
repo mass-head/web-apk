@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { Server } from 'http';
 import fs from 'node:fs';
 import { workerEnv } from '../config/worker-env.js';
+import { resolveQueueLockDurationMs } from '../config/timeouts.js';
 import { metrics } from './metrics.js';
 import { logger } from './logger.js';
 import { Redis } from 'ioredis';
@@ -19,8 +20,18 @@ export function createHealthServer(options: HealthCheckOptions = {}): express.Ex
     res.status(200).json({
       status: 'UP',
       workerId: workerEnv.WORKER_ID,
+      commit:
+        process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || 'unknown',
       timestamp: new Date().toISOString(),
       uptimeSeconds: metrics.getSnapshot().uptimeSeconds,
+      timeouts: {
+        gradleMs: workerEnv.GRADLE_TIMEOUT_MS,
+        buildMs: workerEnv.BUILD_TIMEOUT_MS,
+        queueLockMs: resolveQueueLockDurationMs(
+          workerEnv.BUILD_TIMEOUT_MS,
+          workerEnv.GRADLE_TIMEOUT_MS
+        ),
+      },
     });
   });
 

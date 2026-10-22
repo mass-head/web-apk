@@ -8,9 +8,11 @@ import {
   resolveGradleTimeoutMs,
   resolveJobTimeoutMs,
   resolveMemoryValue,
+  warnOnDeprecatedGradleTimeout,
 } from './timeouts.js';
 
 dotenv.config();
+warnOnDeprecatedGradleTimeout();
 
 const timeoutField = (fallback: number) =>
   z.preprocess((value) => parseTimeoutMs(value, fallback), z.number().int());
@@ -73,7 +75,6 @@ const envSchema = z.object({
   MAX_UPLOAD_SIZE_BYTES: z.coerce.number().default(1073741824), // 1 GB
   JOB_TIMEOUT_MS: timeoutField(DEFAULT_JOB_TIMEOUT_MS),
   GRADLE_TIMEOUT_MS: timeoutField(DEFAULT_GRADLE_TIMEOUT_MS),
-  GRADLE_COMPILATION_TIMEOUT_MS: timeoutField(DEFAULT_GRADLE_TIMEOUT_MS),
   GRADLE_MAX_HEAP: z.string().default('2048m'),
   GRADLE_MAX_METASPACE: z.string().default('512m'),
   GRADLE_OFFLINE: booleanField(true),

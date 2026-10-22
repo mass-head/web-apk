@@ -17,10 +17,10 @@ describe('Worker build timeouts', () => {
     );
   });
 
-  it('supports legacy variables and ignores invalid values', () => {
+  it('ignores the obsolete timeout variable and invalid values', () => {
     expect(
-      resolveGradleTimeoutMs({ GRADLE_COMPILATION_TIMEOUT_MS: '1200000' })
-    ).toBe(1_200_000);
+      resolveGradleTimeoutMs({ GRADLE_COMPILATION_TIMEOUT_MS: '300000' })
+    ).toBe(DEFAULT_GRADLE_TIMEOUT_MS);
     expect(resolveGradleTimeoutMs({ GRADLE_TIMEOUT_MS: 'nope' })).toBe(
       DEFAULT_GRADLE_TIMEOUT_MS
     );

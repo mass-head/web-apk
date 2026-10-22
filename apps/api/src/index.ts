@@ -5,7 +5,12 @@ import { initDatabase, pool } from './db/client.js';
 import { getRedisConnection } from './jobs/queue.js';
 
 async function bootstrap() {
+  const commit = process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || 'unknown';
   console.log(`Starting Web2APK API in ${env.NODE_ENV} mode...`);
+  console.log(`Commit: ${commit}`);
+  console.log(
+    `Timeouts: gradle=${env.GRADLE_TIMEOUT_MS}ms job=${env.JOB_TIMEOUT_MS}ms`
+  );
 
   // Initialize PostgreSQL schema if available
   await initDatabase();

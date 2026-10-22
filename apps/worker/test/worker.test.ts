@@ -190,6 +190,11 @@ describe('Dedicated Android Build Worker Unit & Integration Tests', () => {
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('UP');
       expect(res.body.workerId).toBeDefined();
+      expect(res.body.timeouts.gradleMs).toBe(900_000);
+      expect(res.body.timeouts.buildMs).toBeGreaterThan(900_000);
+      expect(res.body.timeouts.queueLockMs).toBeGreaterThan(
+        res.body.timeouts.buildMs
+      );
     });
 
     it('GET /ready returns 200 READY for readiness probe', async () => {

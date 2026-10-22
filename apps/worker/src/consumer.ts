@@ -248,7 +248,16 @@ export class ConversionWorkerConsumer {
       }
 
       metrics.recordJobFailed(durationMs);
-      logger.error(`Job processing failed: ${err.message}`, conversionId);
+      logger.error(
+        `Job processing failed after ${(durationMs / 1000).toFixed(1)}s: ${err.message}`,
+        conversionId,
+        'failed',
+        {
+          elapsedMs: durationMs,
+          gradleElapsedMs: err.durationMs,
+          failureCode: err.code,
+        }
+      );
 
       // Determine if error is non-retryable
       if (
