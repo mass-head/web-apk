@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Web2APK Offline Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="badge">Packaged Local Mode</div>
+      <h1>Web2APK Offline Demo</h1>
+      <p class="subtitle">Securely loaded via AndroidX WebViewAssetLoader</p>
+    </header>
+
+    <main class="main-content">
+      <section class="card status-card">
+        <div class="card-icon">⚡</div>
+        <div class="card-info">
+          <h3>Asset Security</h3>
+          <p id="origin-display">Origin: Loading...</p>
+        </div>
+      </section>
+
+      <section class="card counter-card">
+        <h3>Interactive State Test</h3>
+        <p>Confirm JavaScript execution and DOM updates:</p>
+        <div class="counter-display" id="counter-val">0</div>
+        <div class="counter-actions">
+          <button id="btn-decrement" class="btn btn-secondary">-</button>
+          <button id="btn-increment" class="btn btn-primary">+</button>
+        </div>
+      </section>
+
+      <section class="card info-card">
+        <h3>Runtime Diagnostics</h3>
+        <ul class="diag-list">
+          <li><strong>Protocol:</strong> <span id="diag-proto">-</span></li>
+          <li><strong>User Agent:</strong> <span id="diag-ua">-</span></li>
+          <li><strong>Screen:</strong> <span id="diag-res">-</span></li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <p>Powered by Web2APK Native Container</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

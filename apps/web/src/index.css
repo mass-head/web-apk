@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  
+  html,
+  body {
+    background-color: #202820;
+    color: #F7F4EA;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+}
+
+/* Custom terminal and code scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #202820;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #285943;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #E9C46A;
+}
+
+/* Custom subtle grid background */
+.bg-grid-pattern {
+  background-image: radial-gradient(rgba(233, 196, 106, 0.08) 1px, transparent 1px), radial-gradient(rgba(40, 89, 67, 0.16) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #F7F4EA 0%, #E9C46A 60%, #285943 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #F7F4EA 0%, #E9C46A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-violet-cyan {
+  background: linear-gradient(135deg, #E9C46A 0%, #F7F4EA 85%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

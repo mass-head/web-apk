@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="8" fill="#0B0F19"/>
+  <rect x="1" y="1" width="30" height="30" rx="7" stroke="url(#paint0_linear)" stroke-width="2"/>
+  <!-- Android robot antenna/head stylized with web globe -->
+  <path d="M10 14C10 10.6863 12.6863 8 16 8C19.3137 8 22 10.6863 22 14H10Z" fill="url(#paint1_linear)"/>
+  <circle cx="13" cy="11.5" r="1" fill="#0B0F19"/>
+  <circle cx="19" cy="11.5" r="1" fill="#0B0F19"/>
+  <rect x="10" y="15.5" width="12" height="8.5" rx="2" fill="url(#paint1_linear)"/>
+  <path d="M7 16V21M25 16V21" stroke="#22D3EE" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 24V26M20 24V26" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="paint0_linear" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="paint1_linear" x1="10" y1="8" x2="22" y2="24" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -1,0 +1,54 @@
+<resources>
+    <string name="app_name">Web2APK Demo</string>
+    
+    <!-- Offline & Error States -->
+    <string name="heading_offline">You\'re offline</string>
+    <string name="message_offline">Check your internet connection and try again.</string>
+    <string name="status_offline">Offline • No connection</string>
+    <string name="status_back_online">Back online • Tap to retry</string>
+    <string name="btn_try_again">Try Again</string>
+    <string name="btn_go_back">Go Back</string>
+
+    <string name="error_server_title">Connection Failed</string>
+    <string name="error_server_desc">Unable to reach the server. Please check your connection and try again.</string>
+
+    <string name="error_not_found_title">Page Not Found (404)</string>
+    <string name="error_not_found_desc">The requested page could not be found.</string>
+
+    <string name="error_server_error_title">Server Error (5xx)</string>
+    <string name="error_server_error_desc">The server encountered a temporary error. Please try again later.</string>
+
+    <string name="error_timeout_title">Taking Too Long to Load</string>
+    <string name="error_timeout_desc">The page took too long to respond. Please check your connection and try again.</string>
+
+    <string name="error_local_api_title">Internet Connection Required</string>
+    <string name="error_local_api_desc">This feature requires an active internet connection to communicate with online services.</string>
+
+    <string name="ssl_error_title">Security Warning</string>
+    <string name="ssl_error_desc">The website presented an invalid or untrusted security certificate. Connection was aborted for your protection.</string>
+
+    <!-- Legacy keys for backwards compatibility -->
+    <string name="error_offline_title">You\'re offline</string>
+    <string name="error_offline_desc">Check your internet connection and try again.</string>
+    <string name="btn_retry">Try Again</string>
+
+    <!-- Loading Indicators -->
+    <string name="loading_app">Loading…</string>
+    <string name="opening_page">Opening page…</string>
+
+    <!-- Navigation & System -->
+    <string name="press_back_again_to_exit">Press back again to exit</string>
+    <string name="download_started">Download started…</string>
+    <string name="downloading_file">Downloading file…</string>
+    <string name="download_failed">Download could not be initiated</string>
+
+    <!-- Permissions -->
+    <string name="permission_camera_rationale">This feature requires camera access. Allow access?</string>
+    <string name="permission_mic_rationale">This feature requires microphone access. Allow access?</string>
+    <string name="permission_location_rationale">This feature requires location access. Allow access?</string>
+    <string name="permission_denied_settings_title">Permission Required</string>
+    <string name="permission_denied_settings_msg">This permission was denied. Please enable it in App Settings to use this feature.</string>
+    <string name="btn_open_settings">Open Settings</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_allow">Allow</string>
+</resources>
