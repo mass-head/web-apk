@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: web2apk-cleanup-job
+  namespace: web2apk
+spec:
+  schedule: "*/15 * * * *" # Every 15 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cleaner
+              image: ghcr.io/your-org/web2apk-worker:latest
+              command:
+                - node
+                - -e
+                - |
+                  import('./dist/cleanup/cleanup-service.js')
+                    .then(({ cleanupService }) => cleanupService.runCleanupCycle())
+                    .then((res) => {
+                      console.log('Cron cleanup cycle finished:', JSON.stringify(res));
+                      process.exit(0);
+                    })
+                    .catch((err) => {
+                      console.error('Cron cleanup cycle failed:', err);
+                      process.exit(1);
+                    });
+              envFrom:
+                - configMapRef:
+                    name: web2apk-config
+                - secretRef:
+                    name: web2apk-secrets
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"

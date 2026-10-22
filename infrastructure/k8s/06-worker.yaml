@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: android-build-worker
+  namespace: web2apk
+  labels:
+    app: android-build-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: android-build-worker
+  template:
+    metadata:
+      labels:
+        app: android-build-worker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4001"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: worker
+          image: ghcr.io/your-org/web2apk-worker:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+          ports:
+            - containerPort: 4001
+              name: health-metrics
+          envFrom:
+            - configMapRef:
+                name: web2apk-config
+            - secretRef:
+                name: web2apk-secrets
+          env:
+            - name: WORKER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "2048Mi"
+            limits:
+              cpu: "2000m"
+              memory: "4096Mi"
+          volumeMounts:
+            - name: ephemeral-workspace
+              mountPath: /tmp/web2apk-builds
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 4001
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4001
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+      volumes:
+        - name: ephemeral-workspace
+          emptyDir:
+            sizeLimit: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: worker-metrics-service
+  namespace: web2apk
+  labels:
+    app: android-build-worker
+spec:
+  ports:
+    - port: 4001
+      targetPort: 4001
+      name: metrics
+  selector:
+    app: android-build-worker

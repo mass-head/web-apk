@@ -1,0 +1,58 @@
+{
+  "family": "web2apk-worker",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "4096",
+  "executionRoleArn": "arn:aws:iam::123456789012:role/web2apk-ecs-execution-role",
+  "taskRoleArn": "arn:aws:iam::123456789012:role/web2apk-worker-task-role",
+  "containerDefinitions": [
+    {
+      "name": "worker",
+      "image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/web2apk-worker:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 4001,
+          "hostPort": 4001,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "WORKER_CONCURRENCY", "value": "2" },
+        { "name": "QUEUE_NAME", "value": "android-conversions" },
+        { "name": "STORAGE_DRIVER", "value": "s3" },
+        { "name": "S3_REGION", "value": "us-east-1" },
+        { "name": "S3_BUCKET_NAME", "value": "web2apk-artifacts" },
+        { "name": "WORKSPACE_BASE_DIR", "value": "/tmp/web2apk-builds" },
+        { "name": "BUILD_TIMEOUT_MS", "value": "600000" },
+        { "name": "GRADLE_COMPILATION_TIMEOUT_MS", "value": "300000" },
+        { "name": "GRADLE_MAX_HEAP", "value": "2048m" },
+        { "name": "HEALTH_PORT", "value": "4001" }
+      ],
+      "secrets": [
+        { "name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:us-east-1:123456789012:secret:web2apk/db-url" },
+        { "name": "REDIS_HOST", "valueFrom": "arn:aws:secretsmanager:us-east-1:123456789012:secret:web2apk/redis-host" },
+        { "name": "REDIS_PASSWORD", "valueFrom": "arn:aws:secretsmanager:us-east-1:123456789012:secret:web2apk/redis-password" },
+        { "name": "S3_ACCESS_KEY_ID", "valueFrom": "arn:aws:secretsmanager:us-east-1:123456789012:secret:web2apk/s3-key-id" },
+        { "name": "S3_SECRET_ACCESS_KEY", "valueFrom": "arn:aws:secretsmanager:us-east-1:123456789012:secret:web2apk/s3-secret-key" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/web2apk-worker",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "worker"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:4001/health || exit 1"],
+        "interval": 20,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 20
+      }
+    }
+  ]
+}

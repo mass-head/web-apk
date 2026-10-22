@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web2apk-config
+  namespace: web2apk
+data:
+  NODE_ENV: "production"
+  PORT: "4000"
+  HEALTH_PORT: "4001"
+  API_BASE_URL: "https://api.web2apk.dev"
+  CORS_ORIGIN: "https://web2apk.dev"
+
+  # Redis Broker
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  QUEUE_NAME: "android-conversions"
+
+  # Object Storage (S3 / R2 / MinIO)
+  STORAGE_DRIVER: "s3"
+  S3_REGION: "us-east-1"
+  S3_BUCKET_NAME: "web2apk-artifacts"
+  S3_FORCE_PATH_STYLE: "false"
+
+  # Worker Sizing & Constraints
+  WORKER_CONCURRENCY: "2"
+  WORKSPACE_BASE_DIR: "/tmp/web2apk-builds"
+  BUILD_TIMEOUT_MS: "600000"
+  GRADLE_COMPILATION_TIMEOUT_MS: "300000"
+  GRADLE_MAX_HEAP: "2048m"
+  GRADLE_MAX_METASPACE: "512m"
+  MIN_FREE_DISK_MB: "1024"
+
+  # Retention & Cleanup
+  CLEANUP_INTERVAL_MS: "300000"
+  ARTIFACT_TTL_HOURS: "24"
+  PRESIGNED_URL_EXPIRY_SECONDS: "1800"
