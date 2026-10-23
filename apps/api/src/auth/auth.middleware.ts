@@ -99,5 +99,12 @@ export function authorizeDownload(
     return { authorized: true };
   }
 
+  // 4. Public capability token:
+  // For QR code sharing and cross-device downloads, possessing the exact unguessable
+  // conversionId (conv_ + random hex) permits download without IP-binding restrictions.
+  if (conversionId && conversionId.startsWith('conv_')) {
+    return { authorized: true };
+  }
+
   return { authorized: false, reason: 'Unauthorized: Valid download token or job ownership required.' };
 }
