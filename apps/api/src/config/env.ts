@@ -77,7 +77,7 @@ const envSchema = z.object({
   GRADLE_TIMEOUT_MS: timeoutField(DEFAULT_GRADLE_TIMEOUT_MS),
   GRADLE_MAX_HEAP: z.string().default('2048m'),
   GRADLE_MAX_METASPACE: z.string().default('512m'),
-  GRADLE_OFFLINE: booleanField(true),
+  GRADLE_OFFLINE: booleanField(false),
 });
 
 const parsed = envSchema.parse(process.env);

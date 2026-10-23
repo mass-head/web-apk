@@ -162,6 +162,16 @@ export class GradleRunner {
     const env = resolveEnvironment();
     const isWindows = process.platform === 'win32';
     const gradleCmd = isWindows ? 'gradlew.bat' : './gradlew';
+
+    if (!isWindows) {
+      const gradlewPath = path.join(workspace, 'gradlew');
+      if (fs.existsSync(gradlewPath)) {
+        try {
+          fs.chmodSync(gradlewPath, 0o755);
+        } catch {}
+      }
+    }
+
     const buildStartedAt = Date.now();
 
     logger.info(
@@ -314,37 +324,40 @@ export class GradleRunner {
         }
       });
 
-      const rejectWithProcessError = (code: number | null) => {
-        const classified = classifyBuildFailure(
-          new Error(`Gradle compilation failed with exit code ${code ?? 'unknown'}.`),
-          { workspace, logs: compilerLogs }
+      const rejectWithProcessError = (code: number | null, signal?: NodeJS.Signals | null) => {
+        const signalMsg = signal ? ` (terminated by ${signal}, likely Out of Memory)` : '';
+        const rawErr = new Error(
+          `Gradle compilation failed with exit code ${code ?? (signal === 'SIGKILL' ? 137 : 'unknown')}${signalMsg}.`
         );
+        const classified = classifyBuildFailure(rawErr, {
+          workspace,
+          logs: compilerLogs + (signal ? `\nProcess was terminated by ${signal} (Out of Memory)` : ''),
+        });
         const error = new Error(classified.message) as BuildProcessError;
         error.code = classified.code;
-        error.exitCode = code;
+        error.exitCode = code ?? (signal === 'SIGKILL' ? 137 : null);
         error.logs = compilerLogs;
         error.durationMs = Date.now() - buildStartedAt;
         safeReject(error);
       };
 
-      child.on('exit', (code) => {
+      child.on('exit', (code, signal) => {
         if (code === 0) {
           logger.info(
             `Gradle compilation completed in ${Math.round((Date.now() - buildStartedAt) / 1000)}s`,
             conversionId
           );
           safeResolve(resolveApkPath());
-        } else if (code !== null) {
-          rejectWithProcessError(code);
+        } else {
+          rejectWithProcessError(code, signal);
         }
       });
 
-      child.on('close', (code) => {
+      child.on('close', (code, signal) => {
         if (code === 0) {
-          const apkPath = path.join(workspace, 'app/build/outputs/apk/debug/app-debug.apk');
-          safeResolve(apkPath);
-        } else if (code !== null) {
-          rejectWithProcessError(code);
+          safeResolve(resolveApkPath());
+        } else {
+          rejectWithProcessError(code, signal);
         }
       });
 

@@ -3,20 +3,20 @@ services:
   - type: web
     name: web2apk
     runtime: docker
+    plan: standard # 2 GB RAM, 1 vCPU (minimum required for Android SDK & Gradle compilation)
     dockerfilePath: Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
-      # Long Android builds: Gradle gets 15 minutes, the job watchdog 20.
       - key: GRADLE_TIMEOUT_MS
-        value: "900000"
+        value: "600000"
       - key: JOB_TIMEOUT_MS
-        value: "1200000"
+        value: "900000"
       - key: GRADLE_MAX_HEAP
-        value: "2048m"
+        value: "1280m"
       - key: GRADLE_MAX_METASPACE
-        value: "512m"
+        value: "256m"
       - key: GRADLE_OFFLINE
-        value: "true"
+        value: "false"
       - key: BUILD_CONCURRENCY
         value: "1"

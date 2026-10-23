@@ -66,7 +66,7 @@ const workerEnvSchema = z.object({
   GRADLE_TIMEOUT_MS: timeoutField(DEFAULT_GRADLE_TIMEOUT_MS), // 15 minutes Gradle timeout
   GRADLE_MAX_HEAP: z.string().default('2048m'),
   GRADLE_MAX_METASPACE: z.string().default('512m'),
-  GRADLE_OFFLINE: booleanField(true),
+  GRADLE_OFFLINE: booleanField(false),
   MIN_FREE_DISK_MB: z.coerce.number().default(500), // Require at least 500 MB free disk space
 
   // Health & Metrics

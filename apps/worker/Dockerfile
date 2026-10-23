@@ -82,11 +82,11 @@ ENV GRADLE_USER_HOME="/home/builder/.gradle"
 ENV ANDROID_TEMPLATE_DIR="/opt/android-template"
 ENV WORKSPACE_BASE_DIR="/tmp/web2apk-builds"
 
-# Pre-extract the Gradle wrapper and warm the dependency cache. Offline builds
-# rely on this cache; compile-only tasks resolve AGP/Kotlin/AndroidX/AAPT2
-# without requiring signing credentials or packaging an APK.
+# Pre-extract the Gradle wrapper and warm the dependency cache.
+# Pre-compile release and debug APK tasks to resolve AGP, Kotlin, AndroidX,
+# AAPT2, R8, and packaging artifacts during image build.
 RUN cd /opt/android-template \
-    && ./gradlew :app:compileDebugKotlin :app:compileReleaseKotlin \
+    && ./gradlew :app:assembleRelease :app:assembleDebug \
         --no-daemon --console=plain \
     && rm -rf app/build build .gradle
 

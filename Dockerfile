@@ -55,11 +55,11 @@ RUN npm install
 RUN npm run build
 
 # Ensure Gradle wrapper is executable and pre-warm the dependency cache used
-# by offline builds. Compile-only tasks avoid packaging/signing but still
-# resolve AGP, Kotlin, AndroidX and AAPT2 artifacts.
+# for release and debug builds. Resolves AGP, Kotlin, AndroidX, AAPT2, R8 and
+# APK packaging/signing artifacts during Docker build.
 RUN chmod +x packages/android-template/gradlew \
     && cd packages/android-template \
-    && ./gradlew :app:compileDebugKotlin :app:compileReleaseKotlin \
+    && ./gradlew :app:assembleRelease :app:assembleDebug \
         --no-daemon --console=plain \
     && rm -rf app/build build .gradle
 

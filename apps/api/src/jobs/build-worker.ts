@@ -608,6 +608,15 @@ export async function processConversionJob(
     const isWindows = process.platform === 'win32';
     const gradleCmd = isWindows ? 'gradlew.bat' : './gradlew';
 
+    if (!isWindows) {
+      const gradlewPath = path.join(workspace, 'gradlew');
+      if (fs.existsSync(gradlewPath)) {
+        try {
+          fs.chmodSync(gradlewPath, 0o755);
+        } catch {}
+      }
+    }
+
     const apkVariant = options.variant || (options.gradleArgs?.some((a) => a.includes('Debug')) ? 'debug' : 'release');
     const defaultArgs = apkVariant === 'release'
       ? ['assembleRelease', ...offlineArgs, '--no-daemon']
@@ -747,12 +756,13 @@ export async function processConversionJob(
         }
       });
 
-      const rejectWithProcessError = (code: number | null) => {
+      const rejectWithProcessError = (code: number | null, signal?: NodeJS.Signals | null) => {
+        const signalMsg = signal ? ` (terminated by ${signal}, likely Out of Memory)` : '';
         const error = new Error(
-          `Gradle compilation failed with exit code ${code ?? 'unknown'}.`
+          `Gradle compilation failed with exit code ${code ?? (signal === 'SIGKILL' ? 137 : 'unknown')}${signalMsg}.`
         ) as BuildProcessError;
-        error.exitCode = code;
-        error.logs = compilerLogs;
+        error.exitCode = code ?? (signal === 'SIGKILL' ? 137 : null);
+        error.logs = compilerLogs + (signal ? `\nProcess was terminated by ${signal} (Out of Memory)` : '');
         error.durationMs = Date.now() - buildStartedAt;
         safeReject(error);
       };
@@ -775,22 +785,22 @@ export async function processConversionJob(
         safeReject(error);
       }, gradleTimeoutMs);
 
-      child.on('exit', (code) => {
+      child.on('exit', (code, signal) => {
         if (code === 0) {
           console.log(
             `[Worker] Gradle build completed in ${Math.round((Date.now() - buildStartedAt) / 1000)}s (${conversionId}).`
           );
           safeResolve();
-        } else if (code !== null) {
-          rejectWithProcessError(code);
+        } else {
+          rejectWithProcessError(code, signal);
         }
       });
 
-      child.on('close', (code) => {
+      child.on('close', (code, signal) => {
         if (code === 0) {
           safeResolve();
-        } else if (code !== null) {
-          rejectWithProcessError(code);
+        } else {
+          rejectWithProcessError(code, signal);
         }
       });
 
