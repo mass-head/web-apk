@@ -15,6 +15,7 @@ import {
   QrCode,
   FileCheck,
   HelpCircle,
+  ExternalLink,
 } from 'lucide-react';
 
 export const DownloadPage: React.FC = () => {
@@ -246,14 +247,25 @@ export const DownloadPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Rendered SVG QR Code */}
-          <div className="p-4 bg-[#F7F4EA] rounded-2xl shadow-xl flex items-center justify-center">
-            <QRCodeSVG
-              value={artifact.downloadUrl.startsWith('http') ? artifact.downloadUrl : window.location.href}
-              size={180}
-              level="M"
-              includeMargin={false}
-            />
+          {/* Rendered SVG QR Code: Points to dedicated clean mobile download page */}
+          <div className="space-y-3 flex flex-col items-center">
+            <div className="p-4 bg-[#F7F4EA] rounded-2xl shadow-xl flex items-center justify-center">
+              <QRCodeSVG
+                value={`${window.location.origin}/d/${buildId}`}
+                size={180}
+                level="M"
+                includeMargin={false}
+              />
+            </div>
+            <a
+              href={`${window.location.origin}/d/${buildId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-[#E9C46A] hover:underline inline-flex items-center gap-1 font-mono"
+            >
+              <span>Preview phone download page</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
 
           <div className="w-full p-3 rounded-xl bg-[#202820] border border-[#285943] text-[11px] text-[#F7F4EA]/70 space-y-1">
